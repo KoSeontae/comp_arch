@@ -1,4 +1,7 @@
+################################################################################
+
 .data
+
 str1:
   .asciiz "Enter the number of integers to push into the min heap: "
 str2:
@@ -13,34 +16,40 @@ newline:
   .asciiz "\n"
 space:
   .asciiz " "
+
 min_heap:
   .align 2
   .space 4096
+
+################################################################################
   
 .text
-# $a0 = n, $a1 = &min_heap
+
+# $a0 = n, $a1 = &array[0]
 print_array:
-  move  $t0, $a0
-  li    $t1, 0
-  move  $t2, $a1
+  move $t0, $a0
+  li $t1, 0
+  move $t2, $a1
 print_array_loop:
-  beq   $t1, $t0, print_array_return
-  li    $v0, 1
-  lw    $a0, 0($t2)
+  beq $t1, $t0, print_array_return
+  li $v0, 1
+  lw $a0, ($t2)
   syscall
-  li    $v0, 4
-  la    $a0, space
+  li $v0, 4
+  la $a0, space
   syscall
-  addi  $t1, $t1, 1
-  addi  $t2, $t2, 4
-  j     print_array_loop
+  addi $t1, $t1, 1
+  addi $t2, $t2, 4
+  j print_array_loop
 print_array_return:
-  li    $v0, 4
-  la    $a0, newline
+  li $v0, 4
+  la $a0, newline
   syscall
-  jr    $ra
-  
-# $a0: current heap count, $a1: base address of min_heap, $a2: new integer
+  jr $ra
+
+# $a0: the current number of elements in the binary min heap
+# $a1: the starting memory address of the binary min heap
+# $a2: the new 32-bit signed integer to push to the binary min heap
 min_heap_push:
   move  $t0, $a0
   sll   $t1, $t0, 2
@@ -64,129 +73,101 @@ do_swap:
   move  $t0, $t2
   j     bubble_up
 push_end:
-  jr    $ra
-  
-# $a0: current heap count, $a1: base address of min_heap
-min_heap_pop:
-  lw    $v0, 0($a1)
-  addi  $t0, $a0, -1
-  blez  $t0, pop_end
-  sll   $t1, $t0, 2
-  add   $t1, $a1, $t1
-  lw    $t2, 0($t1)
-  sw    $t2, 0($a1)
-  li    $t4, 0
-bubble_down:
-  sll   $t1, $t4, 1
-  addi  $t1, $t1, 1
-  bge   $t1, $t0, pop_end
-  sll   $t2, $t1, 2
-  add   $t2, $a1, $t2
-  lw    $t5, 0($t2)
-  sll   $t6, $t4, 1
-  addi  $t6, $t6, 2
-  move  $t7, $t1
-  move  $t8, $t5
-  blt   $t6, $t0, check_right
-  j     compare_parent
-check_right:
-  sll   $t9, $t6, 2
-  add   $t9, $a1, $t9
-  lw    $t9, 0($t9)
-  ble   $t9, $t8, choose_right
-  j     compare_parent
-choose_right:
-  move  $t7, $t6
-  move  $t8, $t9
-compare_parent:
-  sll   $t1, $t4, 2
-  add   $t1, $a1, $t1
-  lw    $t3, 0($t1)
-  ble   $t3, $t8, pop_end
-  sw    $t8, 0($t1)
-  sll   $t1, $t7, 2
-  add   $t1, $a1, $t1
-  sw    $t3, 0($t1)
-  move  $t4, $t7
-  j     bubble_down
-pop_end:
-  jr    $ra
+  jr $ra
   
 .globl main
 main:
-  addi  $sp, $sp, -4
-  sw    $ra, 0($sp)
-  
-  li    $v0, 4
-  la    $a0, str1
+
+  # stack << $ra
+  addi $sp, $sp, -4
+  sw $ra, 0($sp)
+
+  # print_str(str1); $s0 = read_int()
+  li $v0, 4
+  la $a0, str1
   syscall
-  li    $v0, 5
+  li $v0, 5
   syscall
-  move  $s0, $v0
-  
-  li    $s1, 0
-main_push:
-  slt   $t0, $s1, $s0
-  beq   $t0, $zero, pop_phase
-  
-  li    $v0, 4
-  la    $a0, str2
+  move $s0, $v0
+
+  # push $s0 integers into the binary min heap
+  li $s1, 0
+main_0:
+  # print_str(str2)
+  li $v0, 4
+  la $a0, str2
   syscall
-  li    $v0, 5
+  # $s2 = read_int()
+  li $v0, 5
   syscall
-  move  $s2, $v0
-  
-  move  $a0, $s1
-  la    $a1, min_heap
-  move  $a2, $s2
-  jal   min_heap_push
-  
-  addi  $s1, $s1, 1
-  
-  move  $a0, $s1
-  la    $a1, min_heap
-  jal   print_array
-  
-  j     main_push
-  
-pop_phase:
-  move  $s2, $s1
-  li    $s1, 0
-pop_loop:
-  slt   $t0, $s1, $s0
-  beq   $t0, $zero, main_end
-  
-  li    $v0, 4
-  la    $a0, str3
+  move $s2, $v0
+  # min_heap_push($s1, min_heap, $s2)
+  move $a0, $s1
+  la $a1, min_heap
+  move $a2, $s2
+  jal min_heap_push
+  # $s1 = $s1 + 1
+  addi $s1, $s1, 1
+  # print_array($s1, min_heap)
+  move $a0, $s1
+  la $a1, min_heap
+  jal print_array
+  # if ($s1 < $s0) then goto main_0
+  slt $t0, $s1, $s0
+  bne $t0, $zero, main_0
+
+main_1:
+
+  # pop $s0 integers from the binary min heap
+  move $s2, $s1
+  li $s1, 0
+main_2:
+  # print_str(str3)
+  li $v0, 4
+  la $a0, str3
+  syscall
+  # min_heap_pop($s2, min_heap)
+  move $a0, $s2
+  la $a1, min_heap
+  jal min_heap_pop
+  # $s3 = $v0
+  move $s3, $v0
+  # print_str(str4)
+  li $v0, 4
+  la $a0, str4
+  syscall
+  # print_str(str5)
+  li $v0, 4
+  la $a0, str5
+  syscall
+  # print_int($s3)
+  li $v0, 1
+  move $a0, $s3
+  syscall
+  # print_str(newline)
+  li $v0, 4
+  la $a0, newline
   syscall
   
-  move  $a0, $s2
-  la    $a1, min_heap
-  jal   min_heap_pop
-  move  $s3, $v0
-  
-  li    $v0, 4
-  la    $a0, str4
-  syscall
-  li    $v0, 4
-  la    $a0, str5
-  syscall
-  li    $v0, 1
-  move  $a0, $s3
-  syscall
-  li    $v0, 4
-  la    $a0, newline
-  syscall
-  
-  addi  $s1, $s1, 1
-  addi  $s2, $s2, -1
-  
-  move  $a0, $s2
-  la    $a1, min_heap
-  jal   print_array
-  
-  j     pop_loop
-main_end:
-  lw    $ra, 0($sp)
-  addi  $sp, $sp, 4
-  jr    $ra
+  # $s1 = $s1 + 1
+  # $s2 = $s2 - 1
+  addi $s1, $s1, 1
+  addi $s2, $s2, -1
+
+  # print_array($s2, min_heap)
+  move $a0, $s2
+  la $a1, min_heap
+  jal print_array
+
+  # if ($s1 < $s0) then goto main_2
+  slt $t0, $s1, $s0
+  bne $t0, $zero, main_2
+
+main_3:
+
+  # stack >> $ra
+  lw $ra, 0($sp)
+  addi $sp, $sp, 4
+
+  jr $ra
+
