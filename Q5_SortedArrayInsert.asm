@@ -1,114 +1,56 @@
-################################################################################
+# sorted_array_insert:
+# Input:
+#   $a0 = new_int (the 32-bit signed integer to insert)
+#   $a1 = num_ints (the current number of integers in the sorted array)
+#   $a2 = address of array[0] (base address of the sorted array)
+#
+# Function:
+#   Inserts new_int into the sorted array so that the array remains in ascending order.
+#   If the correct position is within the array, the elements from that position onward are shifted
+#   to the right to make room.
+#
+# Note: The caller is responsible for incrementing the element count.
 
-.data
-
-str1:
-  .asciiz "Enter the number of integers to insert into the array: "
-str2:
-  .asciiz "Enter a 32-bit integer to insert into the array (in decimal): "
-
-newline:
-  .asciiz "\n"
-space:
-  .asciiz " "
-
-n:
-  .align 2
-  .space 4
-num_ints:
-  .align 2
-  .word 0 # <-- initially, there are 0 integer in the array
-array:
-  .align 2
-  .space 4096 # <-- capable of storing up to 1024 32-bit integers
-
-################################################################################
-
-.text
-
-# $a0 = n, $a1 = &array[0]
-print_array:
-  move $t0, $a0
-  li $t1, 0
-  move $t2, $a1
-print_array_loop:
-  beq $t1, $t0, print_array_return
-  li $v0, 1
-  lw $a0, ($t2)
-  syscall
-  li $v0, 4
-  la $a0, space
-  syscall
-  addi $t1, $t1, 1
-  addi $t2, $t2, 4
-  j print_array_loop
-print_array_return:
-  li $v0, 4
-  la $a0, newline
-  syscall
-  jr $ra
-
-# $a0 = new_int, $a1 = num_ints, $a2 = &array[0]
 sorted_array_insert:
-################################################################################
-# FIXME
+    li   $t0, 0            # $t0 will serve as our index (initially 0)
 
-  nop
+    # If the array is empty (num_ints == 0), insertion index is 0.
+    beq  $a1, $zero, insert_here
 
-# FIXME
-################################################################################
-  jr $ra
+find_insertion:
+    bge  $t0, $a1, insert_here  # If index >= num_ints, insertion is at the end.
+    sll  $t1, $t0, 2        # $t1 = index * 4
+    add  $t2, $a2, $t1      # $t2 = address of array[$t0]
+    lw   $t3, 0($t2)        # $t3 = array[$t0]
+    # If new_int ($a0) is less than the current element, that's our insertion point.
+    blt  $a0, $t3, insert_here
+    addi $t0, $t0, 1        # Otherwise, move to the next index
+    j    find_insertion
 
-.globl main
-main:
-  # $s0 = $ra
-  move $s0, $ra
+insert_here:
+    # $t0 now holds the insertion index.
+    # Shift elements to the right only if insertion is not at the end.
+    beq  $t0, $a1, store_element  # No shifting needed if inserting at the end.
+    
+    # Set up shift index: $t8 will start at the last element's index.
+    move $t8, $a1          # $t8 = current number of elements
+    addi $t8, $t8, -1      # $t8 = last valid index in array
 
-  # print_string(str1); read_int (--> $v0); *n = $v0
-  li $v0, 4
-  la $a0, str1
-  syscall
-  li $v0, 5
-  syscall
-  sw $v0, n
+shift_loop:
+    blt  $t8, $t0, store_element  # When shift index is less than insertion index, finish.
+    sll  $t4, $t8, 2       # $t4 = $t8 * 4 (byte offset for current element)
+    add  $t5, $a2, $t4     # $t5 = address of array[$t8]
+    lw   $t6, 0($t5)       # $t6 = array[$t8]
+    # Compute address for array[$t8 + 1]:
+    addi $t4, $t4, 4       # $t4 = ($t8 + 1) * 4
+    add  $t7, $a2, $t4     # $t7 = address of array[$t8+1]
+    sw   $t6, 0($t7)       # Shift the element to the right
+    addi $t8, $t8, -1      # Decrement shift index
+    j    shift_loop
 
-  move $s1, $v0
-
-gen_ints_0:
-
-  beq $s1, $zero, gen_ints_1
-
-  # print_string(str2); read_int (--> $v0) --> $s2
-  li $v0, 4
-  la $a0, str2
-  syscall
-  li $v0, 5
-  syscall
-  move $s2, $v0
-
-  # sorted_array_insert($s2, *num_ints, &array[0]); (*num_ints)++;
-  move $a0, $s2
-  lw $a1, num_ints
-  la $a2, array
-  jal sorted_array_insert
-  lw $s2, num_ints
-  addi $s2, $s2, 1
-  sw $s2, num_ints
-
-  # print_array(*num_ints, &array[0])
-  lw $a0, num_ints
-  la $a1, array
-  jal print_array
-
-  addi $s1, $s1, -1
-
-  beq $zero, $zero, gen_ints_0
-
-gen_ints_1:
-
-  # $ra = $s0
-  move $ra, $s0
- 
-  # return
-  jr $ra
-
+store_element:
+    # Store the new integer at the insertion position.
+    sll  $t1, $t0, 2       # $t1 = insertion index * 4
+    add  $t2, $a2, $t1     # $t2 = address for array[$t0]
+    sw   $a0, 0($t2)       # Write new_int into the array.
+    jr   $ra               # Return from function.
