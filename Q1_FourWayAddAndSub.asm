@@ -15,12 +15,6 @@ str3:
 
 .text
 
-# Function: fourWayAddAndSub
-# Description:
-#   - Computes the sum and difference of four 32-bit signed integers.
-#   - Input:  $a0, $a1, $a2, $a3
-#   - Output: $v0 = a0 + a1 + a2 + a3
-#             $v1 = a0 - a1 - a2 - a3
 fourWayAddAndSub:
   # Compute sum: v0 = a0 + a1 + a2 + a3
   add   $t0, $a0, $a1    # t0 = a0 + a1
@@ -32,96 +26,95 @@ fourWayAddAndSub:
   sub   $t1, $t1, $a2    # t1 = a0 - a1 - a2
   sub   $v1, $t1, $a3    # v1 = diff = a0 - a1 - a2 - a3
 
-  jr    $ra             # Return to caller
+  jr $ra
 
 .globl main
 main:
-  # Print prompt and read first integer -> $t0
-  li   $v0, 4
-  la   $a0, str0
+
+  # print_string str0; $t0 = read_int
+  li $v0, 4
+  la $a0, str0
   syscall
-  li   $v0, 5
+  li $v0, 5
   syscall
   move $t0, $v0
 
-  # Print prompt and read second integer -> $t1
-  li   $v0, 4
-  la   $a0, str0
+  # print_string str0; $t1 = read_int
+  li $v0, 4
+  la $a0, str0
   syscall
-  li   $v0, 5
+  li $v0, 5
   syscall
   move $t1, $v0
 
-  # Print prompt and read third integer -> $t2
-  li   $v0, 4
-  la   $a0, str0
+  # print_string str0; $t2 = read_int
+  li $v0, 4
+  la $a0, str0
   syscall
-  li   $v0, 5
+  li $v0, 5
   syscall
   move $t2, $v0
 
-  # Print prompt and read fourth integer -> $t3
-  li   $v0, 4
-  la   $a0, str0
+  # print_string str0; $t3 = read_int
+  li $v0, 4
+  la $a0, str0
   syscall
-  li   $v0, 5
+  li $v0, 5
   syscall
   move $t3, $v0
 
-  # Save registers (callee-saved) before calling the function
+  # $s0 = $ra; $s1 = $a0; $s2 = $a1; $s3 = $a2; $s4 = $a3
   move $s0, $ra
   move $s1, $a0
   move $s2, $a1
   move $s3, $a2
   move $s4, $a3
 
-  # Set up arguments for fourWayAddAndSub:
-  # Move the integers from temporary registers to argument registers
+  # call fourWayAddAndSub
   move $a0, $t0
   move $a1, $t1
   move $a2, $t2
   move $a3, $t3
+  jal fourWayAddAndSub
 
-  jal fourWayAddAndSub  # Call the function
-
-  # Restore registers after function call
+  # $ra = $s0; $a0 = $s1; $a1 = $s2; $a2 = $s3; $a3 = $s4
   move $ra, $s0
   move $a0, $s1
   move $a1, $s2
   move $a2, $s3
   move $a3, $s4
 
-  # Move the results from $v0 and $v1 to $t0 and $t1 for printing
-  move $t0, $v0  # Sum
-  move $t1, $v1  # Difference
+  # $t0 = $v0; $t1 = $v1
+  move $t0, $v0
+  move $t1, $v1
 
-  # Print the result messages
-  li   $v0, 4
-  la   $a0, str1
+  # print_string str1
+  li $v0, 4
+  la $a0, str1
   syscall
 
-  # Print the sum: message, integer, newline
-  li   $v0, 4
-  la   $a0, str2
+  # print_string str2; print_int $t0; print_string newline
+  li $v0, 4
+  la $a0, str2
   syscall
-  li   $v0, 1
+  li $v0, 1
   move $a0, $t0
   syscall
-  li   $v0, 4
-  la   $a0, newline
+  li $v0, 4
+  la $a0, newline
   syscall
 
-  # Print the difference: message, integer, newline
-  li   $v0, 4
-  la   $a0, str3
+  # print_string str3; print_int $t1; print_string newline
+  li $v0, 4
+  la $a0, str3
   syscall
-  li   $v0, 1
+  li $v0, 1
   move $a0, $t1
   syscall
-  li   $v0, 4
-  la   $a0, newline
+  li $v0, 4
+  la $a0, newline
   syscall
 
-  # Exit program
-  li   $v0, 0
-  jr   $ra
+  # return 0
+  li $v0, 0
+  jr $ra
