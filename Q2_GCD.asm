@@ -1,61 +1,74 @@
 .data
-nl:       .asciiz "\n"
-prompt:   .asciiz "Enter a 32-bit unsigned integer (in decimal): "
-msgGCD:   .asciiz "INFO: calculateGCD returned:\n"
-msgRes:   .asciiz "INFO:   $v0 = "
-
+newline:
+  .asciiz "\n"
+str0:
+  .asciiz "Enter a 32-bit unsigned integer (in decimal): "
+str1:
+  .asciiz "INFO: calculateGCD returned:\n"
+str2:
+  .asciiz "INFO:   $v0 = "
+  
 .text
-# a0와 a1의 최대공약수를 계산
+# $a0: a 32-bit unsigned integer
+# $a1: a 32-bit unsigned integer
+# $v0: the greatest common divisor of $a0 and $a1
 calculateGCD:
-    move  $t0, $a0       # t0 <- A
-    move  $t1, $a1       # t1 <- B
+  beq   $a1, $zero, gcd_end
 gcd_loop:
-    beq   $t1, $zero, gcd_finish
-    div   $t0, $t1       # A / B; remainder in HI
-    mfhi  $t2           # t2 <- remainder
-    move  $t0, $t1      # A = B
-    move  $t1, $t2      # B = remainder
-    j     gcd_loop
-gcd_finish:
-    move  $v0, $t0      # 결과: 최대공약수
-    jr    $ra
-
+  div   $a0, $a1
+  mfhi  $t0
+  move  $a0, $a1
+  move  $a1, $t0
+  bne   $a1, $zero, gcd_loop
+gcd_end:
+  move  $v0, $a0
+  jr    $ra
+  
 .globl main
 main:
-    li    $v0, 4
-    la    $a0, prompt
-    syscall
-    li    $v0, 5
-    syscall
-    move  $t4, $v0      # 첫번째 입력
-
-    li    $v0, 4
-    la    $a0, prompt
-    syscall
-    li    $v0, 5
-    syscall
-    move  $t5, $v0      # 두번째 입력
-
-    move  $a0, $t4
-    move  $a1, $t5
-    jal   calculateGCD
-
-    li    $v0, 4
-    la    $a0, msgGCD
-    syscall
-
-    li    $v0, 4
-    la    $a0, msgRes
-    syscall
-
-    move  $t6, $v0      # t6 <- 결과 (최대공약수)
-    li    $v0, 1
-    move  $a0, $t6
-    syscall
-
-    li    $v0, 4
-    la    $a0, nl
-    syscall
-
-    li    $v0, 0
-    jr    $ra
+  li   $v0, 4
+  la   $a0, str0
+  syscall
+  
+  li   $v0, 5
+  syscall
+  move $t0, $v0
+  
+  li   $v0, 4
+  la   $a0, str0
+  syscall
+  
+  li   $v0, 5
+  syscall
+  move $t1, $v0
+  
+  move $s0, $ra
+  move $s1, $a0
+  move $s2, $a1
+  
+  move $a0, $t0
+  move $a1, $t1
+  jal calculateGCD
+  
+  move $ra, $s0
+  move $a0, $s1
+  move $a1, $s2
+  
+  move $t0, $v0
+  li   $v0, 4
+  la   $a0, str1
+  syscall
+  
+  li   $v0, 4
+  la   $a0, str2
+  syscall
+  li   $v0, 1
+  move $a0, $t0
+  syscall
+  
+  li   $v0, 4
+  la   $a0, newline
+  syscall
+  
+  li   $v0, 0
+  jr   $ra
