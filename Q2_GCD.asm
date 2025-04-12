@@ -17,30 +17,35 @@ str2:
 # $v0: the greatest common divisor of $a0 and $a1
 calculateGCD:
 ################################################################################
-# FIXME
-
-  nop
-
-# FIXME
+# Begin Euclidean algorithm
+  beq   $a1, $zero, gcd_end   # if $a1 is zero, jump to end
+gcd_loop:
+  div   $a0, $a1              # divide $a0 by $a1; quotient in LO, remainder in HI
+  mfhi  $t0                  # move remainder from HI to $t0
+  move  $a0, $a1             # set $a0 to $a1
+  move  $a1, $t0             # set $a1 to the remainder
+  bne   $a1, $zero, gcd_loop # if $a1 is not zero, repeat the loop
+gcd_end:
+  move  $v0, $a0             # move the GCD from $a0 to $v0
 ################################################################################
-  jr $ra
+  jr    $ra                  # return from the function
 
 .globl main
 main:
 
   # print_string str0; $t0 = read_int
-  li $v0, 4
-  la $a0, str0
+  li   $v0, 4
+  la   $a0, str0
   syscall
-  li $v0, 5
+  li   $v0, 5
   syscall
   move $t0, $v0
 
   # print_string str0; $t1 = read_int
-  li $v0, 4
-  la $a0, str0
+  li   $v0, 4
+  la   $a0, str0
   syscall
-  li $v0, 5
+  li   $v0, 5
   syscall
   move $t1, $v0
 
@@ -63,22 +68,21 @@ main:
   move $t0, $v0
 
   # print_string str1
-  li $v0, 4
-  la $a0, str1
+  li   $v0, 4
+  la   $a0, str1
   syscall
 
   # print_string str2; print_int $t0; print_string newline
-  li $v0, 4
-  la $a0, str2
+  li   $v0, 4
+  la   $a0, str2
   syscall
-  li $v0, 1
+  li   $v0, 1
   move $a0, $t0
   syscall
-  li $v0, 4
-  la $a0, newline
+  li   $v0, 4
+  la   $a0, newline
   syscall
 
   # return 0
-  li $v0, 0
-  jr $ra
-
+  li   $v0, 0
+  jr   $ra
