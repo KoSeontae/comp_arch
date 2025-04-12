@@ -17,7 +17,7 @@ space:
 
 min_heap:
   .align 2
-  .space 4096        # Storage for up to 1024 integers
+  .space 4096        # storage for up to 1024 integers
 
 ################################################################################
 
@@ -26,19 +26,19 @@ min_heap:
 # print_array:
 #   Input: $a0 = number of elements, $a1 = base address of the array
 print_array:
-  move  $t0, $a0        # t0 = number of elements to print
-  li    $t1, 0          # index = 0
-  move  $t2, $a1        # t2 = pointer to current element
+  move  $t0, $a0         # t0 = number of elements to print
+  li    $t1, 0           # index = 0
+  move  $t2, $a1         # t2 = pointer to current element
 print_array_loop:
   beq   $t1, $t0, print_array_return
-  li    $v0, 1          # syscall: print integer
+  li    $v0, 1           # syscall to print integer
   lw    $a0, 0($t2)
   syscall
-  li    $v0, 4          # syscall: print string
+  li    $v0, 4           # syscall to print string (space)
   la    $a0, space
   syscall
   addi  $t1, $t1, 1
-  addi  $t2, $t2, 4     # next integer (4 bytes)
+  addi  $t2, $t2, 4      # next element (4 bytes)
   j     print_array_loop
 print_array_return:
   li    $v0, 4
@@ -53,111 +53,107 @@ print_array_return:
 #     $a1 = base address of the heap
 #     $a2 = new integer to push
 min_heap_push:
-  # Place new element at the end (index = n).
-  move  $t0, $a0          # t0 = current index = n
-  sll   $t1, $t0, 2       # t1 = n * 4 (byte offset)
-  add   $t2, $a1, $t1     # t2 = address of heap[n]
-  sw    $a2, 0($t2)       # store new integer at heap[n]
+  # Insert new element at the end (index = n).
+  move  $t0, $a0         # t0 = current index
+  sll   $t1, $t0, 2      # t1 = index * 4
+  add   $t1, $a1, $t1    # t1 = address of heap[n]
+  sw    $a2, 0($t1)      # store new integer at heap[n]
 
-  # Bubble up: while the new element is not at the root and is less than its parent.
+  # Bubble up: compare the element with its parent.
 bubble_up:
-  blez  $t0, push_end     # if index <= 0, we're done
-  addi  $t3, $t0, -1      # t3 = t0 - 1
-  sra   $t3, $t3, 1       # parent's index = (t0 - 1) / 2
-  sll   $t4, $t3, 2       # t4 = parent's index * 4
-  add   $t5, $a1, $t4     # t5 = address of parent
-  lw    $t6, 0($t5)       # t6 = parent's value
-
-  sll   $t7, $t0, 2       # t7 = current index * 4
-  add   $t8, $a1, $t7     # t8 = address of current element
-  lw    $t9, 0($t8)       # t9 = current element's value
-
-  blt   $t9, $t6, do_swap # if new element < parent, swap
+  blez  $t0, push_end    # if index <= 0, stop bubbling up
+  addi  $t2, $t0, -1     # t2 = t0 - 1
+  sra   $t2, $t2, 1      # t2 = parent index = (t0-1)/2
+  sll   $t3, $t2, 2      # t3 = parent index * 4
+  add   $t3, $a1, $t3    # t3 = address of parent
+  lw    $t4, 0($t3)      # t4 = parent's value
+  sll   $t5, $t0, 2      # t5 = current index * 4
+  add   $t5, $a1, $t5    # t5 = address of current element
+  lw    $t6, 0($t5)      # t6 = current element's value
+  blt   $t6, $t4, do_swap   # if current < parent, swap
   j     push_end
 do_swap:
-  # Swap parent's and child's values.
-  sw    $t9, 0($t5)       # parent's slot gets new element's value
-  sw    $t6, 0($t8)       # child's slot gets parent's value
-  move  $t0, $t3          # update index to parent's index
+  sw    $t6, 0($t3)      # parent's slot gets current value
+  sw    $t4, 0($t5)      # current slot gets parent's value
+  move  $t0, $t2         # update current index to parent's index
   j     bubble_up
 push_end:
   jr    $ra
 
 # min_heap_pop:
-#   Removes the minimum (root) element from the heap.
+#   Removes and returns the minimum (root) element from the min heap.
 #   Input:
 #     $a0 = current heap count (n)
 #     $a1 = base address of the heap
 #   Output:
-#     $v0 = popped (deleted) integer (minimum)
+#     $v0 = popped integer (minimum)
 min_heap_pop:
-  # Assume there is at least one element.
-  lw    $v0, 0($a1)       # v0 = root element (to be returned)
+  # Save the root element to return.
+  lw    $v0, 0($a1)       # v0 = root element
   addi  $t0, $a0, -1      # t0 = new heap count = n - 1
-
-  # If the heap now becomes empty, we are done.
-  blez  $t0, pop_end
+  blez  $t0, pop_end      # if the heap becomes empty, finish pop
 
   # Move the last element into the root.
-  sll   $t1, $t0, 2       # t1 = (n-1) * 4 (offset for last element)
-  add   $t2, $a1, $t1     # t2 = address of last element
-  lw    $t3, 0($t2)       # t3 = last element's value
-  sw    $t3, 0($a1)       # move it to the root
+  sll   $t1, $t0, 2       # t1 = (n-1)*4
+  add   $t1, $a1, $t1     # t1 = address of last element
+  lw    $t2, 0($t1)       # t2 = last element's value
+  sw    $t2, 0($a1)       # store it at the root
 
-  # Bubble down: start at index i = 0.
-  li    $t4, 0           # t4 = current index (i)
+  # Bubble down: restore the min-heap property.
+  li    $t4, 0           # t4 = current index (i = 0)
 bubble_down:
   # Compute left child index = 2*i + 1.
-  sll   $t5, $t4, 1       # t5 = i * 2
-  addi  $t5, $t5, 1       # t5 = left child index
-  bge   $t5, $t0, pop_end # if left child index >= new count, done
+  sll   $t1, $t4, 1       # t1 = i * 2
+  addi  $t1, $t1, 1       # t1 = left child index
+  bge   $t1, $t0, pop_end  # if left child index >= new count, done
 
   # Load left child's value.
-  sll   $t6, $t5, 2       # t6 = left child index * 4
-  add   $t7, $a1, $t6     # t7 = address of left child
-  lw    $t8, 0($t7)       # t8 = left child's value
-
+  move  $t2, $t1          # t2 = left child index
+  sll   $t3, $t2, 2       # t3 = left child index * 4
+  add   $t3, $a1, $t3     # t3 = address of left child
+  lw    $t5, 0($t3)       # t5 = left child's value
+  
   # Compute right child index = 2*i + 2.
-  sll   $t9, $t4, 1       # t9 = i * 2
-  addi  $t9, $t9, 2       # t9 = right child index
-  # Determine candidate child index for swap.
-  blt   $t9, $t0, right_exists  # if right child exists, go check it
-  move  $t10, $t5         # otherwise, candidate = left child
+  sll   $t6, $t4, 1       # t6 = i * 2
+  addi  $t6, $t6, 2       # t6 = right child index
+  # Default candidate index is left child.
+  move  $t7, $t1          # t7 = candidate index (initially left child)
+  move  $t8, $t5          # t8 = candidate value (initially left child's value)
+  
+  # Check if right child exists.
+  blt   $t6, $t0, right_exists_label
   j     compare_parent
-right_exists:
-  sll   $t11, $t9, 2      # t11 = right child offset = t9 * 4
-  add   $t11, $a1, $t11   # t11 = address of right child
-  lw    $t12, 0($t11)     # t12 = right child's value
-  # Select candidate index:
-  ble   $t12, $t8, choose_right  # if right child's value <= left child's, choose right
-  move  $t10, $t5         # else choose left
+right_exists_label:
+  # Load right child's value.
+  sll   $t9, $t6, 2       # t9 = right child index * 4
+  add   $t9, $a1, $t9     # t9 = address of right child
+  lw    $t9, 0($t9)       # t9 = right child's value
+  # If right child's value is less than or equal to candidate's, choose right child.
+  ble   $t9, $t8, choose_right_label
   j     compare_parent
-choose_right:
-  move  $t10, $t9         # candidate = right child index
-
+choose_right_label:
+  move  $t7, $t6          # candidate index = right child index
+  move  $t8, $t9          # candidate value = right child's value
 compare_parent:
-  # Load parent's value from current index.
-  sll   $t13, $t4, 2      # t13 = i * 4
-  add   $t13, $a1, $t13   # t13 = address of parent
-  lw    $t14, 0($t13)     # t14 = parent's value
-  # Load candidate's value.
-  sll   $t15, $t10, 2     # t15 = candidate index * 4
-  add   $t15, $a1, $t15   # t15 = address of candidate
-  lw    $t16, 0($t15)     # t16 = candidate's value
-  # If parent's value <= candidate's value, the min-heap property is satisfied.
-  ble   $t14, $t16, pop_end
+  # Load parent's value.
+  sll   $t1, $t4, 2       # t1 = i * 4
+  add   $t1, $a1, $t1     # t1 = address of parent
+  lw    $t3, 0($t1)       # t3 = parent's value
+  # If parent's value is less than or equal to candidate's value, the heap property holds.
+  ble   $t3, $t8, pop_end
   # Otherwise, swap parent with candidate.
-  sw    $t16, 0($t13)     # parent's slot gets candidate's value
-  sw    $t14, 0($t15)     # candidate's slot gets parent's value
-  # Update index i to candidate index and continue.
-  move  $t4, $t10
+  sw    $t8, 0($t1)       # store candidate value in parent's slot
+  sll   $t1, $t7, 2       # t1 = candidate index * 4
+  add   $t1, $a1, $t1     # t1 = address of candidate
+  sw    $t3, 0($t1)       # store parent's value in candidate's slot
+  move  $t4, $t7          # update current index to candidate index
   j     bubble_down
 pop_end:
   jr    $ra
 
 .globl main
 main:
-  # Save $ra on stack.
+  # Save return address.
   addi  $sp, $sp, -4
   sw    $ra, 0($sp)
 
@@ -167,12 +163,11 @@ main:
   syscall
   li    $v0, 5
   syscall
-  move  $s0, $v0       # s0 = total number to push
+  move  $s0, $v0         # s0 = total number to push
 
-  # Initialize heap count to 0.
+  # Initialize heap count in s1 to 0.
   li    $s1, 0
 
-  # Push integers into the min heap.
 main_push:
   slt   $t0, $s1, $s0
   beq   $t0, $zero, pop_phase
@@ -183,9 +178,9 @@ main_push:
   syscall
   li    $v0, 5
   syscall
-  move  $s2, $v0       # s2 = new integer
+  move  $s2, $v0         # s2 = new integer
 
-  # Call min_heap_push(s1, min_heap, s2)
+  # Call min_heap_push with (current count, min_heap, new integer).
   move  $a0, $s1
   la    $a1, min_heap
   move  $a2, $s2
@@ -194,7 +189,7 @@ main_push:
   # Increment heap count.
   addi  $s1, $s1, 1
 
-  # Print current state of the heap.
+  # Print current heap.
   move  $a0, $s1
   la    $a1, min_heap
   jal   print_array
@@ -202,24 +197,23 @@ main_push:
   j     main_push
 
 pop_phase:
-  # Pop all integers from the heap.
-  # s1 currently holds the number of elements in the heap.
-  move  $s2, $s1       # s2 = current heap count
-  li    $s1, 0        # s1 will count popped elements
+  # Set s2 = current heap count.
+  move  $s2, $s1
+  li    $s1, 0          # s1 will count popped elements
+
 pop_loop:
   slt   $t0, $s1, $s0
   beq   $t0, $zero, end_main
 
-  # Print pop message.
   li    $v0, 4
   la    $a0, str3
   syscall
 
-  # Call min_heap_pop with current heap count in s2.
+  # Call min_heap_pop with (current heap count in s2, min_heap).
   move  $a0, $s2
   la    $a1, min_heap
   jal   min_heap_pop
-  move  $s3, $v0       # s3 holds the popped element
+  move  $s3, $v0         # s3 = popped element
 
   li    $v0, 4
   la    $a0, str4
@@ -235,8 +229,8 @@ pop_loop:
   syscall
 
   # Update counters: one element popped.
-  addi  $s1, $s1, 1    # popped count incremented
-  addi  $s2, $s2, -1   # reduce heap count
+  addi  $s1, $s1, 1      # increment popped count
+  addi  $s2, $s2, -1     # decrement current heap count
 
   # Print updated heap.
   move  $a0, $s2
